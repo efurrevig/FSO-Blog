@@ -1,10 +1,11 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
-const helper = require('./api_helper')
+const helper = require('./test_helpers/api_helper')
 const app = require('../app')
 const api = supertest(app)
 const Blog = require('../models/blog')
-
+const User = require('../models/user')
+const bcrypt = require('bcrypt')
 
 beforeEach(async () => {
     await Blog.deleteMany({})
@@ -43,6 +44,14 @@ describe('when there are blogs in the db', () => {
 })
 
 describe('a blog can be added to the database', () => {
+    beforeEach(async () => {
+        await User.deleteMany({})
+
+        const passwordHash = await bcrypt.hash('sekret', 10)
+        const user = new User({ username: 'root', passwordHash })
+
+        await user.save()
+    })
 
     test('a valid blog can be added to the database', async () => {
         const newBlog = {
@@ -51,8 +60,14 @@ describe('a blog can be added to the database', () => {
             url: 'testurl.com',
             likes: 1
         }
+
+        const loggedInUser = await api
+            .post('/api/login')
+            .send({ username: 'root', password: 'sekret' })
+
         await api
             .post('/api/blogs')
+            .set('Authorization', `Bearer ${loggedInUser.body.token}`)
             .send(newBlog)
             .expect(201)
             .expect('Content-Type', /application\/json/)
@@ -83,8 +98,13 @@ describe('a blog can be added to the database', () => {
             likes: 0
         }
 
+        const loggedInUser = await api
+            .post('/api/login')
+            .send({ username: 'root', password: 'sekret' })
+
         await api
             .post('/api/blogs')
+            .set('Authorization', `Bearer ${loggedInUser.body.token}`)
             .send(newBlog)
             .expect(400)
 
@@ -99,8 +119,13 @@ describe('a blog can be added to the database', () => {
             likes: 0
         }
 
+        const loggedInUser = await api
+            .post('/api/login')
+            .send({ username: 'root', password: 'sekret' })
+
         await api
             .post('/api/blogs')
+            .set('Authorization', `Bearer ${loggedInUser.body.token}`)
             .send(newBlog)
             .expect(400)
 
