@@ -7,14 +7,15 @@ const Blog = require('../models/blog')
 const User = require('../models/user')
 const bcrypt = require('bcrypt')
 
-beforeEach(async () => {
-    await Blog.deleteMany({})
-    for (let blog of helper.initialBlogs) {
-        let newBlog = new Blog(blog)
-        await newBlog.save()
-    }
-})
+
 describe('when there are blogs in the db', () => {
+    beforeEach(async () => {
+        await Blog.deleteMany({})
+        for (let blog of helper.initialBlogs) {
+            let newBlog = new Blog(blog)
+            await newBlog.save()
+        }
+    })
 
     test('blogs are returned as json', async () => {
         await api
@@ -51,6 +52,13 @@ describe('a blog can be added to the database', () => {
         const user = new User({ username: 'root', passwordHash })
 
         await user.save()
+
+        await Blog.deleteMany({})
+        for (let blog of helper.initialBlogs) {
+            let newBlog = new Blog(blog)
+            await newBlog.save()
+        }
+
     })
 
     test('a valid blog can be added to the database', async () => {
@@ -136,23 +144,58 @@ describe('a blog can be added to the database', () => {
 })
 
 describe('a blog can be deleted from the database', () => {
+    beforeEach(async () => {
+        await User.deleteMany({})
+        await Blog.deleteMany({})
+
+        const passwordHash = await bcrypt.hash('sekret', 10)
+        const user = new User({ username: 'root', passwordHash })
+
+        await user.save()
+
+        const loggedInUser = await api
+            .post('/api/login')
+            .send({ username: 'root', password: 'sekret' })
+        await api
+            .post('/api/blogs')
+            .set('Authorization', `Bearer ${loggedInUser.body.token}`)
+            .send(helper.initialBlogs[0])
+
+    })
+
     test('succeeds with statuscode 204 if id is valid', async () => {
         const blogsAtStart = await helper.blogsInDb()
         const blogToDelete = blogsAtStart[0]
+        const loggedInUser = await api
+            .post('/api/login')
+            .send({ username: 'root', password: 'sekret' })
 
         await api
             .delete(`/api/blogs/${blogToDelete.id}`)
+            .set('Authorization', `Bearer ${loggedInUser.body.token}`)
             .expect(204)
 
         const blogsAtEnd = await helper.blogsInDb()
-        expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length - 1)
+        expect(blogsAtEnd).toHaveLength(blogsAtStart.length - 1)
 
         const contents = blogsAtEnd.map(b => b.title)
         expect(contents).not.toContain(blogToDelete.title)
     })
+
+    test('fails with statuscode 403 if user isnt author of blog', async () => {
+        const blogsAtStart = await helper.blogsInDb()
+        const blogToDelete = blogsAtStart[0]
+    })
 })
 
 describe('a blog in the database can be edited', () => {
+    beforeEach(async () => {
+        await Blog.deleteMany({})
+        for (let blog of helper.initialBlogs) {
+            let newBlog = new Blog(blog)
+            await newBlog.save()
+        }
+    })
     test('succeeds with statuscode 200 if valid edit', async () => {
         //note to be edited
         //new note to replace note to be edited
