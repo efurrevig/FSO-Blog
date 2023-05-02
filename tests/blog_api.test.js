@@ -182,10 +182,10 @@ describe('a blog can be deleted from the database', () => {
         expect(contents).not.toContain(blogToDelete.title)
     })
 
-    test('fails with statuscode 403 if user isnt author of blog', async () => {
-        const blogsAtStart = await helper.blogsInDb()
-        const blogToDelete = blogsAtStart[0]
-    })
+    // test('fails with statuscode 403 if user isnt author of blog', async () => {
+    //     const blogsAtStart = await helper.blogsInDb()
+    //     const blogToDelete = blogsAtStart[0]
+    // })
 })
 
 describe('a blog in the database can be edited', () => {
