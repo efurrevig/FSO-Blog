@@ -47,11 +47,15 @@ blogsRouter.post('/', async (request, response, next) => {
 
 //edit
 blogsRouter.put('/:id', async (request, response, next) => {
-    const { title, author, url, likes } = request.body
+    const decodedToken = jwt.verify(request.token, process.env.SECRET)
+    if (!decodedToken.id) {
+        return response.status(401).json({ error: 'invalid token' })
+    }
+    const { title, author, url, likes, user } = request.body
 
     const updatedBlog = await Blog.findByIdAndUpdate(
         request.params.id,
-        { title, author, url, likes },
+        { title, author, url, likes, user },
         { new: true, runValidators: true, context: 'query' }
     )
     response.json(updatedBlog)
